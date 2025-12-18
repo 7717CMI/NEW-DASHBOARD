@@ -172,9 +172,9 @@ export function GlobalKPICards() {
     let marketSizeEnd = 0
 
     leafRecords.forEach(record => {
-      // Try multiple year key formats (number and string)
-      const startValue = record.time_series[actualStartYear] || record.time_series[String(actualStartYear)] || 0
-      const endValue = record.time_series[actualEndYear] || record.time_series[String(actualEndYear)] || 0
+      // Access time_series with number keys
+      const startValue = record.time_series[actualStartYear] ?? 0
+      const endValue = record.time_series[actualEndYear] ?? 0
       marketSizeStart += startValue
       marketSizeEnd += endValue
     })
