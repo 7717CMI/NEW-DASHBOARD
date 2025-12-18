@@ -161,14 +161,9 @@ export function filterData(
                                (filters.segments && filters.segments.length > 0)
 
       if (record.is_aggregated === true) {
-        // In geography-mode, we need to handle aggregated records carefully:
-        // - If the data has leaf records, prefer those (handled in prepareIntelligentMultiLevelData)
-        // - If the data only has aggregated records, we need to allow them through
-        // So we allow aggregated records through in geography-mode and let the chart preparation handle it
-        if (filters.viewMode === 'geography-mode') {
-          // Allow aggregated records through - prepareIntelligentMultiLevelData will handle selection
-          // This is necessary for uploaded data that might only have aggregated records
-        } else if (!hasSegmentFilter) {
+        // Handle aggregated records to prevent double-counting
+        // Note: geography-mode is handled at line 111 and skips this block entirely
+        if (!hasSegmentFilter) {
           // No segments selected - exclude aggregated records to prevent double-counting
           return false
         } else {
