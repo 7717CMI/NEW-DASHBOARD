@@ -546,16 +546,26 @@ export function D3BubbleChartIndependent({ title, height = 500 }: BubbleChartPro
       const bubbles: BubbleDataPoint[] = []
       const [startYear, endYear] = activeFilters.yearRange
       
-      // Calculate max values for normalization
+      // Calculate max and min values for normalization with better spread
       let maxCAGR = 0
+      let minCAGR = Infinity
       let maxValue = 0
-      
+      let minValue = Infinity
+
       filteredRecords.forEach(record => {
-        const cagr = record.cagr || 0
+        const cagr = Math.abs(record.cagr || 0)
         const value = record.time_series[endYear] || 0
-        maxCAGR = Math.max(maxCAGR, Math.abs(cagr))
+        maxCAGR = Math.max(maxCAGR, cagr)
+        minCAGR = Math.min(minCAGR, cagr)
         maxValue = Math.max(maxValue, value)
+        minValue = Math.min(minValue, value)
       })
+
+      // Ensure we have valid ranges (avoid division by zero)
+      if (minCAGR === Infinity) minCAGR = 0
+      if (minValue === Infinity) minValue = 0
+      const cagrRange = maxCAGR - minCAGR
+      const valueRange = maxValue - minValue
 
       filteredRecords.forEach((record, index) => {
         // Parse CAGR - it might be a string like "9.5%" or a number
@@ -574,10 +584,16 @@ export function D3BubbleChartIndependent({ title, height = 500 }: BubbleChartPro
         
         const value = record.time_series[endYear] || 0
         const baseValue = record.time_series[startYear] || 0
-        
-        // Normalize to 0-100 scale
-        const cagrIndex = maxCAGR > 0 ? (Math.abs(cagr) / maxCAGR) * 100 : 0
-        const valueIndex = maxValue > 0 ? (value / maxValue) * 100 : 0
+
+        // Normalize to 10-100 scale with better spread using min-max normalization
+        // This ensures bubbles spread across the chart even when values are similar
+        // Using 10-100 range instead of 0-100 to keep bubbles away from edges
+        const cagrIndex = cagrRange > 0
+          ? 10 + ((Math.abs(cagr) - minCAGR) / cagrRange) * 90
+          : 50 // Center if all values are the same
+        const valueIndex = valueRange > 0
+          ? 10 + ((value - minValue) / valueRange) * 90
+          : 50 // Center if all values are the same
         
         // For Level 1 with __ALL_SEGMENTS__, use segment_type
         // For other cases, use actual segment name
@@ -1092,7 +1108,7 @@ export function D3BubbleChartIndependent({ title, height = 500 }: BubbleChartPro
         setTooltipData(null)
       })
 
-    // Add labels for larger bubbles
+    // Add labels for larger bubbles with better visibility
     const labels = g.append('g')
       .selectAll('text')
       .data(chartData.bubbles.filter(d => d.radius > 25))
@@ -1104,7 +1120,8 @@ export function D3BubbleChartIndependent({ title, height = 500 }: BubbleChartPro
       .attr('dy', '.35em')
       .style('font-size', '11px')
       .style('font-weight', 'bold')
-      .style('fill', 'white')
+      .style('fill', '#1a1a1a')
+      .style('text-shadow', '0 0 3px white, 0 0 3px white, 0 0 3px white, 0 0 3px white')
       .style('pointer-events', 'none')
       .text(d => d.name.length > 15 ? d.name.substring(0, 12) + '...' : d.name)
 
