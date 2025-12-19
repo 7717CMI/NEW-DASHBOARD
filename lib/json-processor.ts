@@ -1279,22 +1279,26 @@ export async function processJsonDataAsync(
 
       if (Object.keys(cleanedGeographyHierarchy).length > 0) {
         geographyDimension.geography_hierarchy = cleanedGeographyHierarchy
-        // Update all_geographies to include all items from the hierarchy
-        geographyDimension.all_geographies = [...geographies, ...allGeoItems.filter(item => !geographies.includes(item))]
-        // Set regions to the top-level items in the hierarchy
+        // IMPORTANT: Do NOT add "By Region" segment items to all_geographies
+        // all_geographies should only contain actual top-level geography keys from the data
+        // The hierarchy is used for SEGMENT cascade filter, not geography filter
+        // Only update all_geographies if the actual geographies (first-level keys) ARE the regions
+        // Check if geographies are actual regions (like North America, Europe) vs just "Global"
+        const isGlobalOnly = geographies.length === 1 && geographies[0].toLowerCase() === 'global'
+        if (!isGlobalOnly) {
+          // Geographies ARE the actual regions - keep them as is
+          geographyDimension.all_geographies = geographies
+        }
+        // Set regions to the top-level items in the hierarchy (for segment cascade filter)
         geographyDimension.regions = Object.keys(cleanedGeographyHierarchy).filter(key =>
           !Object.values(cleanedGeographyHierarchy).some(children => children.includes(key))
         )
         console.log(`Geography hierarchy built with ${Object.keys(cleanedGeographyHierarchy).length} parent regions`)
         console.log('Geography hierarchy:', JSON.stringify(cleanedGeographyHierarchy, null, 2))
+        console.log('all_geographies remains:', geographyDimension.all_geographies)
       } else {
-        // No valid hierarchy found, ensure all_geographies is properly set
-        console.log('No valid geography hierarchy found (flat structure), using all geographies as-is')
-        // Make sure all_geographies includes items from allGeoItems too
-        if (allGeoItems.length > 0) {
-          const uniqueGeos = [...geographies, ...allGeoItems.filter(item => !geographies.includes(item))]
-          geographyDimension.all_geographies = uniqueGeos
-        }
+        // No valid hierarchy found, keep all_geographies as the original geographies
+        console.log('No valid geography hierarchy found (flat structure), using original geographies')
       }
     }
 
